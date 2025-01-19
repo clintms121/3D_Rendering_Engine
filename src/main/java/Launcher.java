@@ -72,6 +72,23 @@ public class Launcher {
                     v2.y += getHeight() / 2.0;
                     v3.x += getWidth() / 2.0;
                     v3.y += getHeight() / 2.0;
+
+                    // Calculate normal
+                    Vertex ab = new Vertex(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+                    Vertex ac = new Vertex(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
+                    Vertex norm = new Vertex(
+                            ab.y * ac.z - ab.z * ac.y,
+                            ab.z * ac.x - ab.x * ac.z,
+                            ab.x * ac.y - ab.y * ac.x
+                    );
+                    double normalLength = Math.sqrt(norm.x * norm.x + norm.y * norm.y + norm.z * norm.z);
+                    norm.x /= normalLength;
+                    norm.y /= normalLength;
+                    norm.z /= normalLength;
+
+                    //use normal vector
+                    double angleCos = Math.abs(norm.z);
+
                     // Calculate the range to be processed
                     int minX = (int) Math.max(0, Math.ceil(Math.min(v1.x, Math.min(v2.x, v3.x))));
                     int maxX = (int) Math.min(img.getWidth() - 1,
@@ -128,6 +145,8 @@ public class Launcher {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
+
+
     private static void updateTransformMatrix() {
         double heading = Math.toRadians(x[0]);
         double pitch = Math.toRadians(y[0]);
@@ -159,4 +178,40 @@ public class Launcher {
 
         return V1V2CrossV1V3 * V1V2CrossP >= 0;
     }
+
+    public static Color getShade(Color color, double shade) {
+        double redLinear = Math.pow(color.getRed(), 2.4) * shade;
+        double greenLinear = Math.pow(color.getGreen(), 2.4) * shade;
+        double blueLinear = Math.pow(color.getBlue(), 2.4) * shade;
+
+        int red = (int) Math.pow(redLinear, 1/2.4);
+        int green = (int) Math.pow(greenLinear, 1/2.4);
+        int blue = (int) Math.pow(blueLinear, 1/2.4);
+
+        return new Color(red, green, blue);
+    }
+
+    public static List<Triangle> inflate(List<Triangle> tris, double radius) {
+        List<Triangle> result = new ArrayList<>();
+        for (Triangle t : tris) {
+            Vertex m1 = new Vertex((t.v1.x + t.v2.x) / 2, (t.v1.y + t.v2.y) / 2, (t.v1.z + t.v2.z) / 2);
+            Vertex m2 = new Vertex((t.v2.x + t.v3.x) / 2, (t.v2.y + t.v3.y) / 2, (t.v2.z + t.v3.z) / 2);
+            Vertex m3 = new Vertex((t.v1.x + t.v3.x) / 2, (t.v1.y + t.v3.y) / 2, (t.v1.z + t.v3.z) / 2);
+            result.add(new Triangle(t.v1, m1, m3, t.color));
+            result.add(new Triangle(t.v2, m1, m2, t.color));
+            result.add(new Triangle(t.v3, m2, m3, t.color));
+            result.add(new Triangle(m1, m2, m3, t.color));
+        }
+        for (Triangle t : result) {
+            for (Vertex v : new Vertex[]{t.v1, t.v2, t.v3}) {
+                double length = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+                v.x = (v.x / length) * radius;
+                v.y = (v.y / length) * radius;
+                v.z = (v.z / length) * radius;
+            }
+        }
+        return result;
+    }
+
+
 }
